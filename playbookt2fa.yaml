@@ -1,0 +1,32 @@
+- name: Rreceiveing keys from the added servers to be added to the known hots
+  hosts: all
+  gather_facts: false  # gather facts AFTER the host key has been accepted instead
+  vars_files:
+    - external_vars
+
+  tasks:
+  - name: Accept SSH host keys
+    connection: local
+    become: false
+    shell: |
+      ssh-keygen -F worker03 ||
+        ssh-keyscan -H worker03 >> ~/.ssh/known_hosts
+    register: known_hosts_script
+    changed_when: "'found' not in known_hosts_script.stdout"
+
+  - name: Gathering Facts
+    setup:
+
+- name: Add an SSH authorized key for the new added server
+  hosts: worker03
+  vars_files:
+    - external_vars
+
+  tasks:
+   - name: Using the module
+     ansible.posix.authorized_key:
+      user: ansible
+      state: present
+
+      key: "{{ lookup('file', '/home/ansible/.ssh/id_rsa.pub') }}"
+
